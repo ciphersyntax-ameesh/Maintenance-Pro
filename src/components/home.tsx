@@ -34,6 +34,7 @@ const Home = ({
   const handleLogout = () => {
     console.log("User logged out");
     // In a real implementation, this would handle the logout process
+    window.location.href = "/login";
   };
 
   const handleViewJob = (jobId: string) => {

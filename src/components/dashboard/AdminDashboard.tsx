@@ -4,8 +4,9 @@ import ServiceCategoryTabs from "./ServiceCategoryTabs";
 import AdminJobList from "./AdminJobList";
 import CreateJobForm from "../jobs/CreateJobForm";
 import { Button } from "../ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { useNavigate } from "react-router-dom";
 
 // Let's check if we need to create a JobDetailModal component
 interface JobDetailModalProps {
@@ -62,6 +63,7 @@ const AdminDashboard = ({
   userName = "Admin User",
   userRole = "Administrator",
 }: AdminDashboardProps) => {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState("electrical");
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
@@ -213,10 +215,19 @@ const AdminDashboard = ({
                 Current Role: <span className="text-blue-600">{userRole}</span>
               </p>
             </div>
-            <Button onClick={handleCreateJob}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create New Job
-            </Button>
+            <div className="flex space-x-2">
+              <Button onClick={handleCreateJob}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create New Job
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/admin/settings")}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Button>
+            </div>
           </div>
         </div>
 

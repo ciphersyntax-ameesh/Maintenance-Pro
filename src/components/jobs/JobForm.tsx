@@ -1,8 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Camera, Upload, X, Save, Pen } from "lucide-react";
+import { Camera, Upload, X, Save, Pen, Package } from "lucide-react";
 
 import {
   Form,
@@ -35,6 +35,16 @@ const formSchema = z.object({
     .string()
     .min(10, { message: "Description must be at least 10 characters" }),
   materialsUsed: z.string().optional(),
+  selectedMaterials: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        quantity: z.number().min(1),
+        unit: z.string(),
+      }),
+    )
+    .optional(),
   notes: z.string().optional(),
   customerName: z.string().optional(),
   customerEmail: z.string().email().optional(),
@@ -70,6 +80,29 @@ const JobForm = ({
   );
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [availableMaterials, setAvailableMaterials] = useState<
+    Array<{ id: string; name: string; unit: string }>
+  >([]);
+  const [selectedMaterialId, setSelectedMaterialId] = useState("");
+  const [materialQuantity, setMaterialQuantity] = useState(1);
+  const [selectedMaterials, setSelectedMaterials] = useState<
+    Array<{ id: string; name: string; quantity: number; unit: string }>
+  >([]);
+
+  // In a real app, this would fetch from the backend
+  useEffect(() => {
+    // Mock data for available materials
+    setAvailableMaterials([
+      { id: "item1", name: "Electrical Outlet", unit: "pc" },
+      { id: "item2", name: "Electrical Tape", unit: "roll" },
+      { id: "item3", name: "Wire Connectors", unit: "pack" },
+      { id: "item4", name: "Pipe Wrench", unit: "pc" },
+      { id: "item5", name: "PVC Pipe (1-inch)", unit: "ft" },
+      { id: "item6", name: "AC Filter", unit: "pc" },
+      { id: "item7", name: "Interior Paint (White)", unit: "gallon" },
+      { id: "item8", name: "Wood Screws", unit: "box" },
+    ]);
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -83,7 +116,32 @@ const JobForm = ({
     console.log("Before photos:", beforePhotos);
     console.log("After photos:", afterPhotos);
     console.log("Customer signature:", customerSignature);
-    onSubmit({ ...data, customerSignature });
+    console.log("Selected materials:", selectedMaterials);
+    onSubmit({ ...data, customerSignature, selectedMaterials });
+  };
+
+  const handleAddMaterial = () => {
+    if (!selectedMaterialId) return;
+
+    const material = availableMaterials.find(
+      (m) => m.id === selectedMaterialId,
+    );
+    if (!material) return;
+
+    const newMaterial = {
+      id: material.id,
+      name: material.name,
+      quantity: materialQuantity,
+      unit: material.unit,
+    };
+
+    setSelectedMaterials([...selectedMaterials, newMaterial]);
+    setSelectedMaterialId("");
+    setMaterialQuantity(1);
+  };
+
+  const handleRemoveMaterial = (id: string) => {
+    setSelectedMaterials(selectedMaterials.filter((m) => m.id !== id));
   };
 
   // Signature pad handlers
@@ -285,26 +343,107 @@ const JobForm = ({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="materialsUsed"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Materials Used</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="List all materials used"
-                        className="min-h-[80px]"
-                        {...field}
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="materialsUsed"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Additional Materials Used</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="List any additional materials not in the dropdown"
+                          className="min-h-[80px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Include quantities and specifications where applicable.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="border rounded-md p-4 space-y-4">
+                  <h3 className="font-medium flex items-center">
+                    <Package className="h-4 w-4 mr-2" />
+                    Select Materials from Inventory
+                  </h3>
+
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1">
+                      <Select
+                        value={selectedMaterialId}
+                        onValueChange={setSelectedMaterialId}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select material" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableMaterials.map((material) => (
+                            <SelectItem key={material.id} value={material.id}>
+                              {material.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="w-24">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={materialQuantity}
+                        onChange={(e) =>
+                          setMaterialQuantity(parseInt(e.target.value) || 1)
+                        }
+                        placeholder="Qty"
                       />
-                    </FormControl>
-                    <FormDescription>
-                      Include quantities and specifications where applicable.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={handleAddMaterial}
+                      disabled={!selectedMaterialId}
+                    >
+                      Add
+                    </Button>
+                  </div>
+
+                  {selectedMaterials.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium mb-2">
+                        Selected Materials:
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedMaterials.map((material) => (
+                          <div
+                            key={material.id}
+                            className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                          >
+                            <div>
+                              <span className="font-medium">
+                                {material.name}
+                              </span>
+                              <span className="text-sm text-gray-500 ml-2">
+                                {material.quantity} {material.unit}
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveMaterial(material.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               <FormField
                 control={form.control}
